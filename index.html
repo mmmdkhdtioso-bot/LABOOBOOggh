@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سیستم نمرات دانش‌آموزان</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:20px;background:#f1f5fc;font-family:Vazirmatn,Tahoma,sans-serif;color:#18243b}
+button,input{font-family:inherit}
+.hidden{display:none!important}
+.container{max-width:1100px;margin:auto}
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#152753,#4169e1)}
+.login-box{width:100%;max-width:400px;background:white;padding:35px;border-radius:22px;text-align:center;box-shadow:0 20px 60px #0003}
+.login-icon{font-size:35px;margin-bottom:15px}
+.login-box h1{font-size:23px}
+.login-box p{font-size:13px;color:#8390a6}
+.login-box input{width:100%;padding:14px;margin:7px 0;border:1px solid #dce3ef;border-radius:11px;font-size:14px}
+.login-button{width:100%;background:#4169e1;color:white;padding:14px;margin-top:10px}
+#error{color:#d33e50;font-size:12px;margin-top:12px}
+.header{background:linear-gradient(120deg,#182d63,#4775ed);color:white;padding:27px;border-radius:22px;margin-bottom:22px;box-shadow:0 10px 30px #233c7920}
+.header h1{margin:0 0 8px;font-size:25px}
+.header p{margin:0;color:#dce6ff;font-size:13px}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.toolbar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+input[type=date],.search,.grade-input{padding:12px;border:1px solid #e0e6f0;border-radius:10px;background:white;font-size:13px;min-width:0}
+.search{flex:1;min-width:200px}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.stat{background:white;padding:17px;border-radius:15px;box-shadow:0 5px 20px #2030500a}
+.stat small{color:#77849b}
+.stat h2{margin:10px 0 0;font-size:25px}
+.green{color:#15966b}.red{color:#e34e5b}
+.orange{color:#d58b19}.blue{color:#4169e1}
+.panel{background:white;border-radius:18px;overflow:hidden;box-shadow:0 8px 25px #2030500b}
+.panelhead{padding:20px;border-bottom:1px solid #edf0f5;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.panelhead h2{font-size:18px;margin:0}
+button{border:0;padding:10px 14px;border-radius:9px;cursor:pointer;font-weight:600}
+button:hover{filter:brightness(.95)}
+.primary{background:#4169e1;color:white}
+.gray{background:#edf1f8;color:#39465e}
+.danger{background:#fff0f1;color:#cf4351}
+.chart-button,.save-grade{background:#168c70;color:white}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse}
+th,td{padding:13px 12px;text-align:right;border-bottom:1px solid #edf0f5;font-size:13px}
+th{background:#f8faff;color:#77849b}
+tr:hover{background:#fafbff}
+.grade-entry{display:flex;align-items:center;gap:8px;min-width:260px}
+.grade-input{flex:1;width:100%;max-width:230px}
+.save-grade{white-space:nowrap}
+.saved-message{color:#15966b;font-weight:700;font-size:12px}
+.chart-panel{display:none;background:white;border-radius:18px;padding:22px;margin:20px 0;box-shadow:0 8px 25px #2030500b}
+.chart-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.chart-area{max-width:440px;height:340px;margin:15px auto 0;position:relative}
+.chart-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:15px}
+.chart-item{padding:12px;border-radius:10px;text-align:center;background:#f5f7fb;font-size:12px}
+.chart-item b{display:block;font-size:20px;margin-top:5px}
+.empty{text-align:center;padding:25px;color:#888;display:none}
+@media(max-width:750px){
+ body{padding:12px}.stats{grid-template-columns:repeat(2,1fr)}
+ .header{padding:20px}th,td{padding:10px 7px}
+ .chart-summary{grid-template-columns:repeat(2,1fr)}
+ .grade-entry{min-width:230px}
+}
+@media(print){.toolbar,.actions,.chart-button,.logout,.grade-entry button{display:none!important}}
+</style>
+</head>
+<body>
+<div id="loginScreen">
+ <div class="login-box">
+  <div class="login-icon">🔐</div>
+  <h1>ورود به سیستم</h1>
+  <p>نام کاربری و رمز مخصوص معلم را وارد کنید</p>
+  <form id="loginForm">
+   <input id="username" placeholder="نام کاربری" autocomplete="username" required>
+   <input id="password" type="password" placeholder="رمز عبور" autocomplete="current-password" required>
+   <button class="login-button" type="submit">ورود به سیستم</button>
+  </form>
+  <div id="error"></div>
+ </div>
+</div>
+<div id="mainScreen" class="hidden">
+ <div class="container">
+  <header class="header">
+   <div class="topline">
+    <div>
+     <h1>سیستم نمرات دانش‌آموزان</h1>
+     <p>مدیریت نمرات دانش‌آموزان</p>
+    </div>
+    <button class="danger logout" id="logout">خروج از حساب</button>
+   </div>
+  </header>
+  <div class="toolbar">
+   <input type="date" id="date">
+   <input class="search" id="search" type="search" placeholder="جست‌وجوی نام دانش‌آموز..." autocomplete="off">
+   <button class="primary" id="allPresent">ثبت همه نمرات</button>
+   <button class="danger" id="clearGrades">پاک کردن نمرات</button>
+  </div>
+  <div class="stats">
+   <div class="stat"><small>کل دانش‌آموزان</small><h2 id="total">۳۴</h2></div>
+   <div class="stat"><small>نمره ۲۰</small><h2 class="green" id="perfect">۰</h2></div>
+   <div class="stat"><small>نمره ۱۸ به بالا</small><h2 class="orange" id="high">۰</h2></div>
+   <div class="stat"><small>نمره ۱۵ به بالا</small><h2 class="blue" id="mid">۰</h2></div>
+   <div class="stat"><small>نمره ۱۵ به پایین</small><h2 class="red" id="low">۰</h2></div>
+  </div>
+  <section class="chart-panel" id="chartPanel">
+   <div class="chart-top">
+    <div><h2>نمودار نمرات دانش‌آموزان</h2><small id="chartDate"></small></div>
+    <button class="danger" id="closeChart">بستن نمودار ✕</button>
+   </div>
+   <div class="chart-area"><canvas id="gradesChart"></canvas></div>
+   <div class="chart-summary">
+    <div class="chart-item">میانگین نمرات ثبت‌شده<b class="blue" id="averageGrade">—</b></div>
+    <div class="chart-item">تعداد نمرات ثبت‌شده<b id="gradedCount">۰</b></div>
+   </div>
+  </section>
+  <div class="panel">
+   <div class="panelhead">
+    <div><h2>فهرست دانش‌آموزان</h2><small id="dateLabel"></small></div>
+    <div class="actions">
+     <button class="chart-button" id="showChart">📊 نمودار نمرات</button>
+     <button class="gray" id="export">دانلود گزارش</button>
+     <button class="gray" id="print">چاپ</button>
+    </div>
+   </div>
+   <div style="overflow-x:auto">
+    <table>
+     <thead><tr><th>ردیف</th><th>نام دانش‌آموز</th><th>ثبت نمره</th></tr></thead>
+     <tbody id="list"></tbody>
+    </table>
+   </div>
+   <div class="empty" id="empty">دانش‌آموزی با این نام پیدا نشد.</div>
+  </div>
+  <div class="footer" style="text-align:center;color:#8792a7;font-size:11px;margin:20px">اطلاعات نمرات به صورت خودکار در حافظه مرورگر ذخیره می‌شوند.</div>
+ </div>
+</div>
+<script>
+const loginScreen=document.getElementById("loginScreen");
+const mainScreen=document.getElementById("mainScreen");
+let currentStudent="";
+let isTeacher=false;
+const $=id=>document.getElementById(id);
+const students=[
+"امیرعلی مهرابی","بهداد رحیمی","سام میرزایی",
+"مهدیار خلیل ارجمندی","طاها تمدن","سجاد گزاف",
+"محمد طاها ابوالحسنی","امیرعلی محمد زاده","ماهان کریمی",
+"رادمان شاکری","امیرعلی جمالی","بهراد مرادخانی",
+"محمد یاسین حیدری","محمد طاها یزدانی","محمد طاها غندالی",
+"محمد سپهر جلالی","بهراد خداوردی","مسیحا براتیان",
+"آریا قاسمی","شنتیا شکوهی","یوسف حاج امینی",
+"محمد ایلیا ملکی","امیرعلی عباسی","محمد مهدی رفعتی",
+"علی درویشوند","یاسین گودرزی","رادمهر ذاکری امناب",
+"امیرعلی ارمزد","ارمیا جعفری","پرهام طاهریان",
+"محمد ماهان تیرگر","کیان رضایی","پویان محمدیان","عرفان سوهانی"
+];
+students.sort((a,b)=>a.localeCompare(b,"fa"));
+function normalizeText(text){
+ return text.normalize("NFC").replace(/[يى]/g,"ی").replace(/ك/g,"ک")
+  .replace(/[ۀة]/g,"ه").replace(/أ|إ|ٱ/g,"ا").replace(/ؤ/g,"و")
+  .replace(/\u200c/g," ").replace(/\s+/g," ").trim().toLowerCase();
+}
+function fa(n){return Number(n).toLocaleString("fa-IR");}
+function localDate(){
+ const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+ return d.toISOString().slice(0,10);
+}
+const STORAGE_KEY="school_grades_v1";
+let records={};
+try{records=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");}catch(e){records={};}
+let current={};
+let chart=null;
+
+function save(){
+ try{
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+ }catch(e){alert("ذخیره نمرات انجام نشد.");}
+}
+const AUTO_CLEAR_KEY="school_grades_last_auto_clear_v1";
+const AUTO_CLEAR_INTERVAL=24*60*60*1000;
+function checkAutomaticClear(){
+ const now=Date.now();
+ let last=Number(localStorage.getItem(AUTO_CLEAR_KEY));
+ if(!Number.isFinite(last)||last<=0){
+  localStorage.setItem(AUTO_CLEAR_KEY,String(now));
+  return false;
+ }
+ if(now-last<AUTO_CLEAR_INTERVAL)return false;
+ records={};
+ current={};
+ try{
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.setItem(AUTO_CLEAR_KEY,String(now));
+ }catch(e){
+  alert("پاک‌سازی خودکار نمرات انجام نشد.");
+  return false;
+ }
+ if($("date")&&$("date").value)loadDay();
+ return true;
+}
+function visibleStudents(){
+ return isTeacher?students:(currentStudent?[currentStudent]:[]);
+}
+function loadDay(){
+ const date=$("date").value;
+ current={...(records[date]||{})};
+ if(!isTeacher)current=currentStudent&&current[currentStudent]!==undefined
+  ?{[currentStudent]:current[currentStudent]}:{};
+ $("dateLabel").textContent="تاریخ: "+date;
+ render();
+}
+function escapeHtml(text){
+ return text.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function getCounts(){
+ const values=visibleStudents().map(n=>Number(current[n])).filter(v=>Number.isFinite(v)&&v>=0&&v<=20);
+ return {
+  perfect:values.filter(v=>v===20).length,
+  high:values.filter(v=>v>=18&&v<20).length,
+  mid:values.filter(v=>v>=15&&v<18).length,
+  low:values.filter(v=>v<15).length,
+  graded:values.length,
+  average:values.length?values.reduce((a,b)=>a+b,0)/values.length:null
+ };
+}
+function updateStats(){
+ const c=getCounts();
+ $("total").textContent=fa(visibleStudents().length);
+ $("perfect").textContent=fa(c.perfect);
+ $("high").textContent=fa(c.high);
+ $("mid").textContent=fa(c.mid);
+ $("low").textContent=fa(c.low);
+}
+function render(){
+ const query=normalizeText($("search").value);
+ const names=visibleStudents();
+ const filtered=names.filter(n=>normalizeText(n).includes(query));
+ $("list").innerHTML=filtered.map(name=>{
+  const hasGrade=Object.prototype.hasOwnProperty.call(current,name);
+  const grade=hasGrade?current[name]:"";
+  const entry=hasGrade
+   ?'<span class="saved-message">نمره ثبت شد: '+fa(grade)+'</span>'
+   :'<div class="grade-entry"><input class="grade-input" type="number" min="0" max="20" step="0.25" inputmode="decimal" placeholder="نمره دانش آموز" data-grade-input="'+escapeHtml(name)+'"><button class="save-grade" type="button" data-save-grade="'+escapeHtml(name)+'">ثبت نمره</button></div>';
+  return '<tr><td>'+fa(names.indexOf(name)+1)+'</td><td><b>'+escapeHtml(name)+'</b></td><td>'+entry+'</td></tr>';
+ }).join("");
+ $("empty").style.display=filtered.length?"none":"block";
+ updateStats();
+ if($("chartPanel").style.display==="block")updateChart();
+}
+function storeGrade(name,value){
+ const n=Number(value);
+ if(value===""||!Number.isFinite(n)||n<0||n>20){
+  alert("لطفاً نمره‌ای بین ۰ تا ۲۰ وارد کنید.");return false;
+ }
+ const date=$("date").value;
+ records[date]={...(records[date]||{}),[name]:n};
+ current[name]=n;
+ save();
+ return true;
+}
+$("list").addEventListener("click",e=>{
+ const button=e.target.closest("button[data-save-grade]");
+ if(!button)return;
+ const name=button.dataset.saveGrade;
+ const input=$("list").querySelector('[data-grade-input="'+CSS.escape(name)+'"]');
+ if(!input||!storeGrade(name,input.value))return;
+ render();
+});
+$("allPresent").addEventListener("click",()=>{
+ const inputs=[...$("list").querySelectorAll("input[data-grade-input]")];
+ if(!inputs.length){alert("نمره جدیدی برای ثبت وجود ندارد.");return;}
+ const pending=inputs.filter(input=>input.value.trim()!=="");
+ if(!pending.length){alert("ابتدا نمره دانش‌آموزان را وارد کنید.");return;}
+ const invalid=pending.find(input=>{
+  const n=Number(input.value);return !Number.isFinite(n)||n<0||n>20;
+ });
+ if(invalid){alert("همه نمره‌های واردشده باید بین ۰ تا ۲۰ باشند.");invalid.focus();return;}
+ const date=$("date").value;
+ records[date]={...(records[date]||{})};
+ pending.forEach(input=>records[date][input.dataset.gradeInput]=Number(input.value));
+ current={...records[date]};
+ save();render();
+});
+$("date").addEventListener("change",loadDay);
+$("search").addEventListener("input",render);
+$("clearGrades").addEventListener("click",()=>{
+ if(!isTeacher)return;
+ const date=$("date").value;
+ if(!date)return;
+ if(!confirm("آیا مطمئن هستید؟ تمام نمرات ثبت‌شده برای این روز از حافظه مرورگر پاک می‌شوند و قابل بازگشت نیستند."))return;
+ delete records[date];
+ current={};
+ save();
+ render();
+ alert("تمام نمرات این روز پاک شد.");
+});
+
+function updateChart(){
+ const c=getCounts();
+ $("chartDate").textContent="تاریخ نمرات: "+$("date").value;
+ $("averageGrade").textContent=c.average===null?"—":fa(c.average.toFixed(2))+" از ۲۰";
+ $("gradedCount").textContent=fa(c.graded);
+ const data=[c.perfect,c.high,c.mid,c.low];
+ if(chart){
+  chart.data.datasets[0].data=data;chart.update();return;
+ }
+ chart=new Chart($("gradesChart").getContext("2d"),{
+  type:"doughnut",
+  data:{labels:["نمره ۲۰","۱۸ تا کمتر از ۲۰","۱۵ تا کمتر از ۱۸","کمتر از ۱۵"],
+   datasets:[{data,backgroundColor:["#15966b","#d58b19","#4169e1","#e34e5b"],borderColor:"#fff",borderWidth:4,hoverOffset:8}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:"62%",
+   plugins:{legend:{position:"bottom",labels:{font:{family:"Vazirmatn",size:13},padding:18}},
+    tooltip:{titleFont:{family:"Vazirmatn"},bodyFont:{family:"Vazirmatn"}}}}
+ });
+}
+$("showChart").addEventListener("click",()=>{
+ $("chartPanel").style.display="block";updateChart();
+ $("chartPanel").scrollIntoView({behavior:"smooth",block:"center"});
+});
+$("closeChart").addEventListener("click",()=>{$("chartPanel").style.display="none";});
+$("export").addEventListener("click",()=>{
+ const date=$("date").value;
+ const rows=[["تاریخ","نام دانش‌آموز","نمره"]];
+ visibleStudents().forEach(name=>{
+  rows.push([date,name,Object.prototype.hasOwnProperty.call(current,name)?current[name]:"ثبت نشده"]);
+ });
+ const csv="\uFEFF"+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\r\n");
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");a.href=url;a.download="grades-"+date+".csv";
+ document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+});
+$("print").addEventListener("click",()=>window.print());
+window.addEventListener("storage",e=>{
+ if(e.key===STORAGE_KEY){
+  try{records=JSON.parse(e.newValue||"{}");}catch(_){records={};}
+  if($("date").value&&!mainScreen.classList.contains("hidden"))loadDay();
+ }
+});
+// پاک‌سازی خودکار هر ۲۴ ساعت؛ در صورت بسته بودن صفحه، هنگام باز شدن بعدی بررسی می‌شود.
+setInterval(checkAutomaticClear,60*1000);
+function initialize(){
+ $("clearGrades").classList.toggle("hidden",!isTeacher);
+ if(!$("date").value)$("date").value=localDate();
+ checkAutomaticClear();
+ loadDay();
+}
+$("loginForm").addEventListener("submit",e=>{
+ e.preventDefault();
+ const user=$("username").value.trim();
+ const pass=$("password").value.trim();
+ if(user==="iaoottidms"&&pass==="d...12345678987654321"){
+  currentStudent="";isTeacher=true;
+  sessionStorage.setItem("attendance_role","teacher");
+  sessionStorage.removeItem("attendance_student");
+  loginScreen.classList.add("hidden");mainScreen.classList.remove("hidden");
+  $("search").value="";initialize();return;
+ }
+ const student=students.find(name=>normalizeText(name)===normalizeText(user));
+ if(student&&normalizeText(pass)===normalizeText(student)){
+  currentStudent=student;isTeacher=false;
+  sessionStorage.setItem("attendance_role","student");
+  sessionStorage.setItem("attendance_student",student);
+  loginScreen.classList.add("hidden");mainScreen.classList.remove("hidden");
+  $("search").value="";initialize();
+ }else{$("error").textContent="اطلاعات ورود نادرست است.";}
+});
+$("logout").addEventListener("click",()=>{
+ sessionStorage.removeItem("attendance_student");sessionStorage.removeItem("attendance_role");
+ currentStudent="";isTeacher=false;
+ mainScreen.classList.add("hidden");loginScreen.classList.remove("hidden");
+ $("password").value="";$("username").value="";$("error").textContent="";
+});
+const savedStudent=sessionStorage.getItem("attendance_student");
+const savedRole=sessionStorage.getItem("attendance_role");
+if(savedRole==="teacher"){
+ isTeacher=true;currentStudent="";
+ loginScreen.classList.add("hidden");mainScreen.classList.remove("hidden");initialize();
+}else if(savedStudent&&students.includes(savedStudent)){
+ currentStudent=savedStudent;isTeacher=false;
+ loginScreen.classList.add("hidden");mainScreen.classList.remove("hidden");initialize();
+}
+</script>
+</body>
+</html>
